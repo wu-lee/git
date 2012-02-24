@@ -64,6 +64,37 @@ test_expect_success 'correct GIT_DIR while using -d' '
 	grep drepo "$TRASHDIR/backup-refs"
 '
 
+# No .mailmap created yet
+test_expect_success 'mailmap filter with empty .mailmap file is no-op' '
+	touch .mailmap &&
+	git filter-branch --mailmap-filter branch &&
+	test $H = $(git rev-parse HEAD)
+'
+
+test_expect_success 'mailmap filter fails without .mailmap file' '
+	mkdir -p temp &&
+	mv .mailmap temp/mailmap &&
+	test_must_fail git filter-branch --mailmap-filter
+'
+
+test_expect_success 'mailmap filter with empty mailmap.file is no-op' '
+	git config mailmap.file temp/mailmap &&
+	git filter-branch --mailmap-filter &&
+	test $H = $(git rev-parse HEAD)
+'
+
+test_expect_success 'mailmap filter with mailmap.file rewrites authors and committers' '
+	cat <<EOF >temp/mailmap
+
+EOF
+	git config mailmap.file temp/mailmap &&
+	git filter-branch --mailmap-filter &&
+	test $H = $(git rev-parse HEAD)
+'
+
+
+
+
 test_expect_success 'Fail if commit filter fails' '
 	test_must_fail git filter-branch -f --commit-filter "exit 1" HEAD
 '
