@@ -100,7 +100,7 @@ eval \`cd \$GIT_DIR/..; git log -1 --pretty=format:"$template" \$GIT_COMMIT\`
 EOF
 }
 
-USAGE="[--env-filter <command>] [--tree-filter <command>]
+USAGE="[--env-filter <command>] [--mailmap-filter] [--tree-filter <command>]
 	[--index-filter <command>] [--parent-filter <command>]
 	[--msg-filter <command>] [--commit-filter <command>]
 	[--tag-name-filter <command>] [--subdirectory-filter <directory>]
