@@ -79,6 +79,27 @@ set_ident () {
 	finish_ident COMMITTER
 }
 
+
+# This function generates an env-filter which will use a .mailmap file
+# as described by git-shortlog to define author name remapping.  Note,
+# it is only a function for convenient encapsulation. It takes no
+# arguments and depends on no variables.
+mailmap_filter_generator () {
+    an=GIT_AUTHOR_NAME
+    ae=GIT_AUTHOR_EMAIL
+    cn=GIT_COMMITTER_NAME
+    ce=GIT_COMMITTER_EMAIL
+
+    # This is what we want to run as an env filter
+    template="$an='%aN'; $ae='%aE'; $cn='%cN'; $ce='%cE'; export $an $ae $cn $ce"
+
+    # Where the % placeholders are expanded by git log using 
+    # mailmap file, if one is defined.
+    cat <<EOF
+eval \`cd \$GIT_DIR/..; git log -1 --pretty=format:"$template" \$GIT_COMMIT\`
+EOF
+}
+
 USAGE="[--env-filter <command>] [--tree-filter <command>]
 	[--index-filter <command>] [--parent-filter <command>]
 	[--msg-filter <command>] [--commit-filter <command>]
@@ -94,6 +115,7 @@ if [ "$(is_bare_repository)" = false ]; then
 fi
 
 tempdir=.git-rewrite
+filter_mailmap=
 filter_env=
 filter_tree=
 filter_index=
@@ -128,6 +150,18 @@ do
 		shift
 		prune_empty=t
 		continue
+		;;
+	--mailmap-filter)
+		shift
+		# Check that a .mailmap is available, else probably something is
+		# wrong.
+		mailmap_file=`git config mailmap.file`
+		[ -f ".mailmap" ] ||
+			[ -f "$mailmap_file" ] ||
+                		die "There is no .mailmap file in the working dir, " \
+				    "nor configured by the mailmap.file variable."
+		filter_mailmap=`mailmap_filter_generator`
+		break
 		;;
 	-*)
 		;;
@@ -304,6 +338,8 @@ while read commit parents; do
 
 	eval "$(set_ident <../commit)" ||
 		die "setting author/committer failed for commit $commit"
+	eval "$filter_mailmap" < /dev/null ||
+		die "mailmap filter failed: $filter_mailmap"
 	eval "$filter_env" < /dev/null ||
 		die "env filter failed: $filter_env"
 
